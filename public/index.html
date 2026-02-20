@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MIGRATE AI (SAGE Demo)</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Arial; margin: 24px; max-width: 900px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display:block; font-size: 12px; opacity: .8; margin-bottom: 6px; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 10px; }
+    textarea { min-height: 90px; }
+    button { padding: 12px 14px; border-radius: 12px; border: 0; cursor: pointer; }
+    .row { display:flex; gap:10px; align-items:center; margin-top: 14px; }
+    pre { white-space: pre-wrap; background: #f6f6f6; padding: 14px; border-radius: 12px; border: 1px solid #e5e5e5; }
+    .muted { font-size: 12px; opacity: .7; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>MIGRATE AI (SAGE Demo)</h1>
+  <p class="muted">입력 → 추천 3개 + 준비 로드맵 (간단 데모)</p>
+
+  <div class="grid">
+    <div>
+      <label>체류 자격</label>
+      <select id="visa">
+        <option value="F-6">F-6 (결혼이민)</option>
+        <option value="D-2">D-2 (유학)</option>
+        <option value="H-2">H-2 (방문취업)</option>
+        <option value="E-9">E-9 (비전문취업)</option>
+        <option value="기타">기타/모름</option>
+      </select>
+    </div>
+
+    <div>
+      <label>한국어 수준</label>
+      <select id="korean">
+        <option value="초급">초급</option>
+        <option value="중급">중급</option>
+        <option value="고급">고급</option>
+      </select>
+    </div>
+
+    <div>
+      <label>학력</label>
+      <select id="education">
+        <option value="고졸">고졸</option>
+        <option value="전문대/대학 재학">전문대/대학 재학</option>
+        <option value="대졸">대졸</option>
+        <option value="해외 학위">해외 학위</option>
+      </select>
+    </div>
+
+    <div>
+      <label>근무 형태</label>
+      <select id="workType">
+        <option value="풀타임">풀타임</option>
+        <option value="파트타임">파트타임</option>
+        <option value="재택/온라인">재택/온라인</option>
+      </select>
+    </div>
+
+    <div>
+      <label>자녀/돌봄 부담</label>
+      <select id="care">
+        <option value="없음">없음</option>
+        <option value="있음">있음</option>
+      </select>
+    </div>
+
+    <div>
+      <label>예산(원)</label>
+      <input id="budget" type="number" placeholder="예: 500000" />
+    </div>
+
+    <div style="grid-column: 1 / -1;">
+      <label>경력/관심(간단히)</label>
+      <textarea id="background" placeholder="예: 본국에서 회계 2년, 한국에선 서비스 알바 경험 / 관심: 무역, 교육, 디자인"></textarea>
+    </div>
+  </div>
+
+  <div class="row">
+    <button id="btn">추천 받기</button>
+    <span id="status" class="muted"></span>
+  </div>
+
+  <h3>결과</h3>
+  <pre id="out">아직 결과가 없어요.</pre>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    $("btn").addEventListener("click", async () => {
+      $("status").textContent = "요청 중...";
+      $("out").textContent = "";
+
+      const profile = {
+        visa: $("visa").value,
+        korean_level: $("korean").value,
+        education: $("education").value,
+        work_type: $("workType").value,
+        care_burden: $("care").value,
+        budget_krw: Number($("budget").value || 0),
+        background: $("background").value.trim()
+      };
+
+      try {
+        const r = await fetch("/api/recommend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profile })
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          const detail = data?.detail;
+          const msg =
+            typeof detail === "object" && detail !== null
+              ? JSON.stringify(detail, null, 2)
+              : (detail || data?.error || "request failed");
+          throw new Error(msg);
+        }
+        $("out").textContent = data.result || "(빈 응답)";
+        $("status").textContent = "완료!";
+      } catch (e) {
+        $("status").textContent = "에러";
+        $("out").textContent = "오류: " + (e?.message || String(e));
+      }
+    });
+  </script>
+</body>
+</html>
